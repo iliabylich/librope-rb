@@ -7,3 +7,9 @@ RSpec.describe Librope do
     expect(Librope::VERSION).not_to be nil
   end
 end
+
+RSpec.describe Librope::Rope do
+  it 'can be instantiated' do
+    expect(Librope::Rope.new).to be_a(Librope::Rope)
+  end
+end

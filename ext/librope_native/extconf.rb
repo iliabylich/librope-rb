@@ -2,8 +2,14 @@
 
 require 'mkmf'
 
-$CFLAGS << ' -Wall -Werror -Wno-declaration-after-statement '
-$CFLAGS << '-O2 -std=c99'
-$INCFLAGS << ' -I$(srcdir)/../../vendor/librope'
+$CFLAGS << ' -O2 -Wall -I. -std=c99'
 
-create_makefile('librope_native')
+extension_name = 'librope_native'
+dir_config(extension_name)
+
+$srcs = ['librope_native.c', 'vendor/rope.c']
+
+$INCFLAGS << ' -I$(srcdir)/vendor'
+$VPATH << '$(srcdir)/vendor'
+
+create_makefile(extension_name)
