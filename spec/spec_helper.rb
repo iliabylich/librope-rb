@@ -1,7 +1,9 @@
-$:.unshift File.expand_path('..', __dir__)
+# frozen_string_literal: true
 
-require "bundler/setup"
-require "librope"
+$LOAD_PATH.unshift File.expand_path('..', __dir__)
+
+require 'bundler/setup'
+require 'librope'
 
 RSpec.configure do |config|
   config.disable_monkey_patching!

@@ -1,7 +1,19 @@
----
 sudo: false
 language: ruby
 cache: bundler
-rvm:
-  - 2.6.0
-before_install: gem install bundler -v 1.17.2
+before_install:
+  - gem install bundler -v '< 2'
+  - bundle --version
+  - gem --version
+matrix:
+  include:
+    - name: 2.5.5 / RSpec
+      rvm: 2.5.5
+      script: bundle exec rake spec
+    - name: 2.6.3 / RSpec
+      rvm: 2.6.3
+      script: bundle exec rake spec
+
+    - name: Rubocop
+      rvm: 2.6.3
+      script: bundle exec rubocop
