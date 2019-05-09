@@ -10,10 +10,10 @@ matrix:
   include:
     - name: 2.5.5 / RSpec
       rvm: 2.5.5
-      script: bundle exec rake spec
+      script: bundle exec rake
     - name: 2.6.3 / RSpec
       rvm: 2.6.3
-      script: bundle exec rake spec
+      script: bundle exec rake
 
     - name: Rubocop
       rvm: 2.6.3
