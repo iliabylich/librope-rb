@@ -2,6 +2,7 @@ sudo: false
 language: ruby
 cache: bundler
 before_install:
+  - git submodule update --init
   - gem install bundler -v '< 2'
   - bundle --version
   - gem --version
