@@ -6,3 +6,7 @@ Style/Documentation:
 
 Metrics/LineLength:
   Max: 120
+
+Style/GlobalVars:
+  Exclude:
+    - 'ext/librope_native/extconf.rb'
