@@ -1,3 +1,3 @@
-[submodule "librope"]
-	path = librope
+[submodule "vendor/librope"]
+	path = vendor/librope
 	url = https://github.com/josephg/librope.git
