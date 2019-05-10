@@ -16,19 +16,18 @@ static void rope_dealloc(rope *r) {
   rope_free(r);
 }
 
-static VALUE rope_alloc(VALUE rope_klass) {
-  rope *r;
-  r = rope_new();
-  return Data_Wrap_Struct(rope_klass, NULL, rope_dealloc, r);
-}
-
 static VALUE rope_alloc_with(VALUE rope_klass, rope *r) {
   return Data_Wrap_Struct(rope_klass, NULL, rope_dealloc, r);
 }
 
-#define INIT_ROPE(ruby_obj, r) \
-  rope *r; \
-  Data_Get_Struct(ruby_obj, rope, r);
+static VALUE rope_alloc(VALUE rope_klass) {
+  return rope_alloc_with(rope_klass, rope_new());
+}
+
+// Does something like "rope* r; Data_Get_Struct(obj, rope, r); return r;""
+#define ExtractRope(obj) \
+  ((rope*)rb_data_object_get(obj))
+#define CurrentRope ExtractRope(self)
 
 static VALUE rb_rope_initialize(int argc, VALUE* argv, VALUE self) {
   if (argc == 0) {
@@ -36,12 +35,8 @@ static VALUE rb_rope_initialize(int argc, VALUE* argv, VALUE self) {
   } else if (argc == 1) {
     VALUE str = argv[0];
     Check_Type(str, T_STRING);
-    char *raw_str = StringValueCStr(str);
 
-    rope *r;
-    Data_Get_Struct(self, rope, r);
-
-    rope_insert(r, 0, (uint8_t*) raw_str);
+    rope_insert(CurrentRope, 0, (uint8_t*) StringValueCStr(str));
   } else {
     rb_raise(rb_eArgError, "wrong number of arguments, expected 0 or 1");
   }
@@ -50,39 +45,29 @@ static VALUE rb_rope_initialize(int argc, VALUE* argv, VALUE self) {
 }
 
 static VALUE rb_rope_copy(VALUE self) {
-  INIT_ROPE(self, r);
-  rope *copy = rope_copy(r);
-  return rope_alloc_with(rb_cRope, copy);
+  return rope_alloc_with(CLASS_OF(self), rope_copy(CurrentRope));
 }
 
 static VALUE rb_rope_length(VALUE self) {
-  INIT_ROPE(self, r);
-  size_t length = rope_char_count(r);
-  return LONG2FIX(length);
+  return LONG2FIX(rope_char_count(CurrentRope));
 }
 
 static VALUE rb_rope_bytesize(VALUE self) {
-  INIT_ROPE(self, r);
-  size_t bytesize = rope_byte_count(r);
-  return LONG2FIX(bytesize);
+  return LONG2FIX(rope_byte_count(CurrentRope));
 }
 
 static VALUE rb_rope_to_s(VALUE self) {
-  INIT_ROPE(self, r);
+  rope *r = CurrentRope;
   uint8_t *str = rope_create_cstr(r);
-  size_t length = rope_byte_count(r);
-  return rb_utf8_str_new((char*) str, length);
+  size_t bytesize = rope_byte_count(r);
+  return rb_utf8_str_new((char*) str, bytesize);
 }
 
 static VALUE rb_rope_insert(VALUE self, VALUE pos, VALUE str) {
   Check_Type(pos, T_FIXNUM);
   Check_Type(str, T_STRING);
 
-  INIT_ROPE(self, r);
-
-  char *raw_str = StringValueCStr(str);
-
-  rope_insert(r, FIX2LONG(pos), (uint8_t*) raw_str);
+  rope_insert(CurrentRope, FIX2LONG(pos), (uint8_t*) (StringValueCStr(str)));
 
   return Qtrue;
 }
@@ -91,9 +76,7 @@ static VALUE rb_rope_delete(VALUE self, VALUE pos, VALUE num) {
   Check_Type(pos, T_FIXNUM);
   Check_Type(num, T_FIXNUM);
 
-  INIT_ROPE(self, r);
-
-  rope_del(r, FIX2LONG(pos), FIX2LONG(num));
+  rope_del(CurrentRope, FIX2LONG(pos), FIX2LONG(num));
 
   return Qtrue;
 }
@@ -106,7 +89,7 @@ static VALUE rb_rope_delete(VALUE self, VALUE pos, VALUE num) {
 #define rope_node_bytesize(node) LONG2FIX(rope_node_num_bytes(node))
 
 static VALUE rb_rope_print(VALUE self) {
-  INIT_ROPE(self, r);
+  rope *r = CurrentRope;
 
   print_formatted("chars: %zd\tbytes: %zd\theight: %d\n", r->num_chars, r->num_bytes, r->head.height);
 
@@ -134,17 +117,13 @@ static VALUE rb_rope_print(VALUE self) {
 }
 
 static VALUE rb_rope_print_native(VALUE self) {
-  INIT_ROPE(self, r);
-
-  _rope_print(r);
+  _rope_print(CurrentRope);
 
   return Qtrue;
 }
 
 static VALUE rb_rope_each_node(VALUE self) {
-  INIT_ROPE(self, r);
-
-  ROPE_FOREACH(r, node) {
+  ROPE_FOREACH(CurrentRope, node) {
     VALUE rope_node_hash = rb_hash_new();
 
     rb_hash_aset(rope_node_hash, symString,   rope_node_to_ruby_string(node));
