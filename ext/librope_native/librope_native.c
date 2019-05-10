@@ -8,8 +8,8 @@ static void debug(const char* str) {
   rb_p(rb_str_new2(str));
 }
 
-static void rope_dealloc(rope *ptr) {
-  rope_free(ptr);
+static void rope_dealloc(rope *r) {
+  rope_free(r);
 }
 
 static VALUE rope_alloc(VALUE rope_klass) {
@@ -37,23 +37,24 @@ static VALUE rb_rope_initialize(int argc, VALUE* argv, VALUE rope_klass) {
   return Qnil;
 }
 
+#define INIT_ROPE(ruby_obj, r) \
+  rope *r; \
+  Data_Get_Struct(ruby_obj, rope, r);
+
 static VALUE rb_rope_length(VALUE self) {
-  rope *r;
-  Data_Get_Struct(self, rope, r);
+  INIT_ROPE(self, r);
   size_t length = rope_char_count(r);
   return LONG2FIX(length);
 }
 
 static VALUE rb_rope_bytesize(VALUE self) {
-  rope *r;
-  Data_Get_Struct(self, rope, r);
+  INIT_ROPE(self, r);
   size_t bytesize = rope_byte_count(r);
   return LONG2FIX(bytesize);
 }
 
 static VALUE rb_rope_to_s(VALUE self) {
-  rope *r;
-  Data_Get_Struct(self, rope, r);
+  INIT_ROPE(self, r);
   uint8_t *str = rope_create_cstr(r);
   return rb_utf8_str_new_cstr((char*) str);
 }
