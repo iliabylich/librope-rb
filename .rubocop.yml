@@ -10,3 +10,15 @@ Metrics/LineLength:
 Style/GlobalVars:
   Exclude:
     - 'ext/librope_native/extconf.rb'
+
+Metrics/BlockLength:
+  Exclude:
+    - 'spec/**/*_spec.rb'
+
+Lint/AmbiguousBlockAssociation:
+  Exclude:
+    - 'spec/**/*_spec.rb'
+
+Style/BlockDelimiters:
+  Exclude:
+    - 'spec/**/*_spec.rb'

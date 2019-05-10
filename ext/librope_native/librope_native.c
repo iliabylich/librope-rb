@@ -18,7 +18,15 @@ static VALUE rope_alloc(VALUE rope_klass) {
   return Data_Wrap_Struct(rope_klass, NULL, rope_dealloc, r);
 }
 
-static VALUE rb_rope_initialize(int argc, VALUE* argv, VALUE rope_klass) {
+static VALUE rope_alloc_with(VALUE rope_klass, rope *r) {
+  return Data_Wrap_Struct(rope_klass, NULL, rope_dealloc, r);
+}
+
+#define INIT_ROPE(ruby_obj, r) \
+  rope *r; \
+  Data_Get_Struct(ruby_obj, rope, r);
+
+static VALUE rb_rope_initialize(int argc, VALUE* argv, VALUE self) {
   if (argc == 0) {
     // noop, empty rope has been created by allocator
   } else if (argc == 1) {
@@ -27,7 +35,7 @@ static VALUE rb_rope_initialize(int argc, VALUE* argv, VALUE rope_klass) {
     char *raw_str = StringValueCStr(str);
 
     rope *r;
-    Data_Get_Struct(rope_klass, rope, r);
+    Data_Get_Struct(self, rope, r);
 
     rope_insert(r, 0, (uint8_t*) raw_str);
   } else {
@@ -37,9 +45,11 @@ static VALUE rb_rope_initialize(int argc, VALUE* argv, VALUE rope_klass) {
   return Qnil;
 }
 
-#define INIT_ROPE(ruby_obj, r) \
-  rope *r; \
-  Data_Get_Struct(ruby_obj, rope, r);
+static VALUE rb_rope_copy(VALUE self) {
+  INIT_ROPE(self, r);
+  rope *copy = rope_copy(r);
+  return rope_alloc_with(rb_cRope, copy);
+}
 
 static VALUE rb_rope_length(VALUE self) {
   INIT_ROPE(self, r);
@@ -59,6 +69,20 @@ static VALUE rb_rope_to_s(VALUE self) {
   return rb_utf8_str_new_cstr((char*) str);
 }
 
+static VALUE rb_rope_insert(VALUE self, VALUE at, VALUE str) {
+  Check_Type(at, T_FIXNUM);
+  Check_Type(str, T_STRING);
+
+  INIT_ROPE(self, r);
+
+  char *raw_str = StringValueCStr(str);
+  size_t pos = FIX2LONG(at);
+
+  rope_insert(r, pos, (uint8_t*) raw_str);
+
+  return Qtrue;
+}
+
 void Init_librope_native() {
   debug("Loading librope_native");
 
@@ -68,7 +92,10 @@ void Init_librope_native() {
   rb_define_alloc_func(rb_cRope, rope_alloc);
 
   rb_define_method(rb_cRope, "initialize", rb_rope_initialize, -1);
+  rb_define_method(rb_cRope, "dup", rb_rope_copy, 0);
+  rb_define_method(rb_cRope, "clone", rb_rope_copy, 0);
   rb_define_method(rb_cRope, "length", rb_rope_length, 0);
   rb_define_method(rb_cRope, "bytesize", rb_rope_bytesize, 0);
+  rb_define_method(rb_cRope, "insert", rb_rope_insert, 2);
   rb_define_method(rb_cRope, "to_s", rb_rope_to_s, 0);
 }
