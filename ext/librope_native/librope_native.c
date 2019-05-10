@@ -69,16 +69,26 @@ static VALUE rb_rope_to_s(VALUE self) {
   return rb_utf8_str_new_cstr((char*) str);
 }
 
-static VALUE rb_rope_insert(VALUE self, VALUE at, VALUE str) {
-  Check_Type(at, T_FIXNUM);
+static VALUE rb_rope_insert(VALUE self, VALUE pos, VALUE str) {
+  Check_Type(pos, T_FIXNUM);
   Check_Type(str, T_STRING);
 
   INIT_ROPE(self, r);
 
   char *raw_str = StringValueCStr(str);
-  size_t pos = FIX2LONG(at);
 
-  rope_insert(r, pos, (uint8_t*) raw_str);
+  rope_insert(r, FIX2LONG(pos), (uint8_t*) raw_str);
+
+  return Qtrue;
+}
+
+static VALUE rb_rope_delete(VALUE self, VALUE pos, VALUE num) {
+  Check_Type(pos, T_FIXNUM);
+  Check_Type(num, T_FIXNUM);
+
+  INIT_ROPE(self, r);
+
+  rope_del(r, FIX2LONG(pos), FIX2LONG(num));
 
   return Qtrue;
 }
@@ -97,5 +107,6 @@ void Init_librope_native() {
   rb_define_method(rb_cRope, "length", rb_rope_length, 0);
   rb_define_method(rb_cRope, "bytesize", rb_rope_bytesize, 0);
   rb_define_method(rb_cRope, "insert", rb_rope_insert, 2);
+  rb_define_method(rb_cRope, "delete", rb_rope_delete, 2);
   rb_define_method(rb_cRope, "to_s", rb_rope_to_s, 0);
 }

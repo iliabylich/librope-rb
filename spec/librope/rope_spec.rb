@@ -65,6 +65,11 @@ RSpec.describe Librope::Rope do
       context '#clone' do
         include_examples 'it creates a full copy', :clone
       end
+
+      context '#delete' do
+        before { rope.delete(2, 3) }
+        it { expect(rope.to_s).to eq(str[0..1] + str[5..-1]) }
+      end
     end
   end
 end
