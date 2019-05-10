@@ -93,6 +93,14 @@ static VALUE rb_rope_delete(VALUE self, VALUE pos, VALUE num) {
   return Qtrue;
 }
 
+static VALUE rb_rope_print(VALUE self) {
+  INIT_ROPE(self, r);
+
+  _rope_print(r);
+
+  return Qnil;
+}
+
 void Init_librope_native() {
   debug("Loading librope_native");
 
@@ -109,4 +117,5 @@ void Init_librope_native() {
   rb_define_method(rb_cRope, "insert", rb_rope_insert, 2);
   rb_define_method(rb_cRope, "delete", rb_rope_delete, 2);
   rb_define_method(rb_cRope, "to_s", rb_rope_to_s, 0);
+  rb_define_method(rb_cRope, "_print", rb_rope_print, 0);
 }
