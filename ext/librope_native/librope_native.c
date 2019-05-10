@@ -4,6 +4,10 @@
 VALUE rb_mLibrope;
 VALUE rb_cRope;
 
+VALUE symString;
+VALUE symLength;
+VALUE symBytesize;
+
 static void debug(const char* str) {
   rb_p(rb_str_new2(str));
 }
@@ -66,7 +70,8 @@ static VALUE rb_rope_bytesize(VALUE self) {
 static VALUE rb_rope_to_s(VALUE self) {
   INIT_ROPE(self, r);
   uint8_t *str = rope_create_cstr(r);
-  return rb_utf8_str_new_cstr((char*) str);
+  size_t length = rope_byte_count(r);
+  return rb_utf8_str_new((char*) str, length);
 }
 
 static VALUE rb_rope_insert(VALUE self, VALUE pos, VALUE str) {
@@ -93,10 +98,61 @@ static VALUE rb_rope_delete(VALUE self, VALUE pos, VALUE num) {
   return Qtrue;
 }
 
+#define print_formatted(fmt, ...)\
+  rb_io_write(rb_stdout, rb_sprintf(fmt, ##__VA_ARGS__))
+
+#define rope_node_to_ruby_string(node) rb_utf8_str_new((char*) node->str, node->num_bytes)
+#define rope_node_length(node) LONG2FIX(rope_node_chars(node))
+#define rope_node_bytesize(node) LONG2FIX(rope_node_num_bytes(node))
+
 static VALUE rb_rope_print(VALUE self) {
   INIT_ROPE(self, r);
 
+  print_formatted("chars: %zd\tbytes: %zd\theight: %d\n", r->num_chars, r->num_bytes, r->head.height);
+
+  print_formatted("HEAD");
+  for (int i = 0; i < r->head.height; i++) {
+    print_formatted(" |%3zd ", r->head.nexts[i].skip_size);
+  }
+  print_formatted("\n");
+
+  int num = 0;
+  ROPE_FOREACH(r, n) {
+    print_formatted("%3d:", num++);
+    for (int i = 0; i < n->height; i++) {
+      print_formatted(" |%3zd ", n->nexts[i].skip_size);
+    }
+    print_formatted("        : \"");
+
+    VALUE string = rope_node_to_ruby_string(n);
+    print_formatted("%s", StringValueCStr(string));
+
+    print_formatted("\"\n");
+  }
+
+  return Qnil;
+}
+
+static VALUE rb_rope_print_native(VALUE self) {
+  INIT_ROPE(self, r);
+
   _rope_print(r);
+
+  return Qtrue;
+}
+
+static VALUE rb_rope_each_node(VALUE self) {
+  INIT_ROPE(self, r);
+
+  ROPE_FOREACH(r, node) {
+    VALUE rope_node_hash = rb_hash_new();
+
+    rb_hash_aset(rope_node_hash, symString,   rope_node_to_ruby_string(node));
+    rb_hash_aset(rope_node_hash, symLength,   rope_node_length(node));
+    rb_hash_aset(rope_node_hash, symBytesize, rope_node_bytesize(node));
+
+    rb_yield(rope_node_hash);
+  }
 
   return Qnil;
 }
@@ -104,9 +160,15 @@ static VALUE rb_rope_print(VALUE self) {
 void Init_librope_native() {
   debug("Loading librope_native");
 
+  symString   = ID2SYM(rb_intern("string"));
+  symLength   = ID2SYM(rb_intern("length"));
+  symBytesize = ID2SYM(rb_intern("bytesize"));
+
   rb_mLibrope = rb_define_module("Librope");
 
   rb_cRope = rb_define_class_under(rb_mLibrope, "Rope", rb_cObject);
+  rb_const_set(rb_cRope, rb_intern("MAX_NODE_SIZE"), LONG2FIX(ROPE_NODE_STR_SIZE));
+
   rb_define_alloc_func(rb_cRope, rope_alloc);
 
   rb_define_method(rb_cRope, "initialize", rb_rope_initialize, -1);
@@ -117,5 +179,7 @@ void Init_librope_native() {
   rb_define_method(rb_cRope, "insert", rb_rope_insert, 2);
   rb_define_method(rb_cRope, "delete", rb_rope_delete, 2);
   rb_define_method(rb_cRope, "to_s", rb_rope_to_s, 0);
-  rb_define_method(rb_cRope, "_print", rb_rope_print, 0);
+  rb_define_method(rb_cRope, "print", rb_rope_print, 0);
+  rb_define_method(rb_cRope, "print_native", rb_rope_print_native, 0);
+  rb_define_method(rb_cRope, "each_node", rb_rope_each_node, 0);
 }
